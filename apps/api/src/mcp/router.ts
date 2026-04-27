@@ -21,17 +21,33 @@ export class MCPRouter {
     input: object,
     context: MCPCallContext
   ): Promise<MCPToolResult> {
-    // TODO: Week 3–6
-    // 1. Look up server URL: MCPRegistry[mcpName]
-    // 2. Check client has this MCP enabled in Supabase client_mcps — throw MCPNotEnabledError if not
-    // 3. Call MCP server via @anthropic-ai/sdk MCP client
-    // 4. Call this.logCall() — always, on success AND failure (billing foundation)
-    // 5. Return typed MCPToolResult or throw typed error
-    throw new Error('MCPRouter.call not yet implemented')
+    const start = Date.now()
+    const serverUrl = MCPRegistry[mcpName]
+
+    // TODO: Week 6 — check client_mcps table, throw MCPNotEnabledError if not enabled
+    // TODO: Week 6 — wrap in try/finally and always call this.logCall()
+
+    let response: Response
+    try {
+      response = await fetch(`${serverUrl}/call`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: toolName, input }),
+      })
+    } catch (err) {
+      throw new Error(`MCP server '${mcpName}' unreachable at ${serverUrl}: ${String(err)}`)
+    }
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      throw new Error(`MCP call '${toolName}' on '${mcpName}' failed (${response.status}): ${text}`)
+    }
+
+    const result = (await response.json()) as MCPToolResult
+    return { ...result, durationMs: Date.now() - start }
   }
 
   // IMPORTANT: Must always be called — even on failure. This is the billing foundation.
-  private async logCall(_log: MCPCallLog): Promise<void> {
-    // TODO: Week 3 — insert to mcp_call_logs via Supabase
-  }
+  // TODO: Week 6 — insert to mcp_call_logs via Supabase
+  private async logCall(_log: MCPCallLog): Promise<void> {}
 }

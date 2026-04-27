@@ -5,6 +5,7 @@ import { applyFilters } from './tools/apply-filters.js'
 import { getView } from './tools/get-view.js'
 import { embedWorkbook } from './tools/embed-workbook.js'
 import { listViews } from './tools/list-views.js'
+import { listWorkbooks } from './tools/list-workbooks.js'
 
 const app = express()
 const PORT = process.env['PORT'] ?? 3002
@@ -18,6 +19,7 @@ const tools: Record<string, ToolFn> = {
   'get-view': getView as ToolFn,
   'embed-workbook': embedWorkbook as ToolFn,
   'list-views': listViews as ToolFn,
+  'list-workbooks': listWorkbooks as ToolFn,
 }
 
 // POST /call — MCPRouter sends { tool, input } here to invoke any tableau tool
