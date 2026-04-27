@@ -1,0 +1,14 @@
+{
+  "name": "@querylens/shared",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    ".": "./src/types.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
