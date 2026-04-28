@@ -1,8 +1,15 @@
 // LLM adapter — single gateway for all language model calls in QueryLens.
-// All agents call chat() or chatWithTools() from here. No direct Ollama calls elsewhere.
+// All agents call chat() or chatWithTools() from here. No direct Groq calls elsewhere.
 
-const BASE_URL = process.env['OLLAMA_BASE_URL'] ?? 'http://localhost:11434'
-const DEFAULT_MODEL = process.env['OLLAMA_MODEL'] ?? 'mistral'
+import OpenAI from 'openai'
+
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1'
+const DEFAULT_MODEL = process.env['GROQ_MODEL'] ?? 'llama-3.3-70b-versatile'
+
+const groq = new OpenAI({
+  apiKey: process.env['GROQ_API_KEY'] ?? '',
+  baseURL: GROQ_BASE_URL,
+})
 
 // ─── Public types (used by agents) ────────────────────────────────────────────
 
@@ -39,73 +46,20 @@ export class LLMError extends Error {
   }
 }
 
-// ─── Ollama API types (internal) ──────────────────────────────────────────────
-
-interface OllamaMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-  tool_calls?: Array<{
-    function: { name: string; arguments: Record<string, unknown> }
-  }>
-}
-
-interface OllamaTool {
-  type: 'function'
-  function: {
-    name: string
-    description: string
-    parameters: Record<string, unknown>
-  }
-}
-
-interface OllamaChatRequest {
-  model: string
-  messages: OllamaMessage[]
-  tools?: OllamaTool[]
-  stream: false
-  options?: { temperature?: number }
-}
-
-interface OllamaChatResponse {
-  model: string
-  message: OllamaMessage
-  done: boolean
-}
-
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-async function callOllama(body: OllamaChatRequest): Promise<OllamaChatResponse> {
-  let response: Response
-  try {
-    response = await fetch(`${BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-  } catch (err) {
-    throw new LLMError(`Ollama unreachable at ${BASE_URL}`, err)
-  }
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new LLMError(`Ollama responded ${response.status}: ${text}`)
-  }
-
-  return response.json() as Promise<OllamaChatResponse>
-}
-
-function toOllamaTools(tools: LLMTool[]): OllamaTool[] {
+function toGroqTools(tools: LLMTool[]): OpenAI.Chat.ChatCompletionTool[] {
   return tools.map((t) => ({
-    type: 'function',
+    type: 'function' as const,
     function: { name: t.name, description: t.description, parameters: t.parameters },
   }))
 }
 
-function parseResponse(message: OllamaMessage): LLMResponse {
+function parseResponse(message: OpenAI.Chat.ChatCompletionMessage): LLMResponse {
   const toolCalls: LLMToolCall[] =
     message.tool_calls?.map((tc) => ({
       name: tc.function.name,
-      input: tc.function.arguments,
+      input: JSON.parse(tc.function.arguments) as Record<string, unknown>,
     })) ?? []
   return { content: message.content ?? '', toolCalls }
 }
@@ -113,7 +67,6 @@ function parseResponse(message: OllamaMessage): LLMResponse {
 // ─── JSON validation helpers ──────────────────────────────────────────────────
 
 function tryParseJSON(text: string): unknown {
-  // Strip markdown code fences models commonly add around JSON (```json ... ``` or ``` ... ```)
   const stripped = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
   try {
     return JSON.parse(stripped)
@@ -128,18 +81,23 @@ export async function chat(
   messages: LLMMessage[],
   options: LLMOptions = {}
 ): Promise<LLMResponse> {
-  const data = await callOllama({
-    model: options.model ?? DEFAULT_MODEL,
-    messages,
-    stream: false,
-    options: options.temperature !== undefined ? { temperature: options.temperature } : undefined,
-  })
-  return parseResponse(data.message)
+  let response: OpenAI.Chat.ChatCompletion
+  try {
+    response = await groq.chat.completions.create({
+      model: options.model ?? DEFAULT_MODEL,
+      messages,
+      temperature: options.temperature,
+    })
+  } catch (err) {
+    throw new LLMError('Groq request failed', err)
+  }
+  const message = response.choices[0]?.message
+  if (!message) throw new LLMError('Groq returned no choices')
+  return parseResponse(message)
 }
 
 // Calls chat() and parses the response as JSON.
 // If the response isn't valid JSON, retries once with an explicit correction prompt.
-// Logs a warning when a retry was needed so callers can track model reliability.
 export async function chatJSON<T = unknown>(
   messages: LLMMessage[],
   options: LLMOptions = {}
@@ -169,12 +127,19 @@ export async function chatWithTools(
   tools: LLMTool[],
   options: LLMOptions = {}
 ): Promise<LLMResponse> {
-  const data = await callOllama({
-    model: options.model ?? DEFAULT_MODEL,
-    messages,
-    tools: toOllamaTools(tools),
-    stream: false,
-    options: options.temperature !== undefined ? { temperature: options.temperature } : undefined,
-  })
-  return parseResponse(data.message)
+  let response: OpenAI.Chat.ChatCompletion
+  try {
+    response = await groq.chat.completions.create({
+      model: options.model ?? DEFAULT_MODEL,
+      messages,
+      tools: toGroqTools(tools),
+      tool_choice: 'required',
+      temperature: options.temperature,
+    })
+  } catch (err) {
+    throw new LLMError('Groq tool-call request failed', err)
+  }
+  const message = response.choices[0]?.message
+  if (!message) throw new LLMError('Groq returned no choices')
+  return parseResponse(message)
 }

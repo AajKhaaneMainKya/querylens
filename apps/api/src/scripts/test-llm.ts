@@ -1,8 +1,7 @@
 import { chat, chatWithTools, chatJSON } from '../services/llm.js'
 
-console.log('=== QueryLens LLM adapter test ===')
-console.log(`Ollama: ${process.env['OLLAMA_BASE_URL'] ?? 'http://localhost:11434'}`)
-console.log(`Model:  ${process.env['OLLAMA_MODEL'] ?? 'mistral'}`)
+console.log('=== QueryLens LLM adapter test (Groq) ===')
+console.log(`Model: ${process.env['GROQ_MODEL'] ?? 'llama-3.3-70b-versatile'}`)
 console.log('')
 
 // Test 1: plain chat
@@ -50,18 +49,6 @@ const r3 = await chatJSON<{ city: string; country: string }>([
   },
 ])
 console.log('     parsed    :', r3)
-console.log('')
-
-// Test 4: chatJSON — retry path (deliberately ask for JSON after a prose preamble)
-console.log('[ 4 ] chatJSON (retry path — model asked for prose first)...')
-const r4 = await chatJSON<{ status: string }>([
-  {
-    role: 'user',
-    content:
-      'First explain what JSON is in one sentence, then return: {"status":"ok"}',
-  },
-])
-console.log('     parsed    :', r4)
 console.log('')
 
 console.log('=== done ===')

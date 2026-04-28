@@ -25,6 +25,10 @@ export async function embedWorkbook(input: EmbedWorkbookInput): Promise<MCPToolR
 
   const embedUrl = `${SERVER_BASE}/views/${viewPath}?${params.toString()}`
 
+  // Week 8: On trial accounts this URL returns a permissions error in the browser.
+  // Proper embedding requires Tableau Connected App tokens (trusted authentication).
+  // Fix when onboarding a pilot client with full Tableau Cloud access.
+
   return {
     success: true,
     data: { embedUrl },
