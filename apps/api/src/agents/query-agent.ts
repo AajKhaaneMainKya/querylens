@@ -201,7 +201,7 @@ export class QueryAgent {
         dimensions: toolInput.dimensions,
         measures: toolInput.measures,
       },
-      context,
+      { clientId: context.clientId, agentName: 'QueryAgent', userId: context.userId },
     )
 
     const { chartUrl, appliedFilters } = mcpResult.data as {

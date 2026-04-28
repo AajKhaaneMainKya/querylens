@@ -1,5 +1,6 @@
 import type { MCPName, MCPToolResult, MCPCallLog, AgentName } from '@querylens/shared'
 import { MCPRegistry } from './registry.js'
+import { supabase } from '../lib/supabase.js'
 
 export interface MCPCallContext {
   clientId: string
@@ -19,35 +20,79 @@ export class MCPRouter {
     mcpName: MCPName,
     toolName: string,
     input: object,
-    context: MCPCallContext
+    context: MCPCallContext,
   ): Promise<MCPToolResult> {
     const start = Date.now()
     const serverUrl = MCPRegistry[mcpName]
 
-    // TODO: Week 6 — check client_mcps table, throw MCPNotEnabledError if not enabled
-    // TODO: Week 6 — wrap in try/finally and always call this.logCall()
+    // Check client has this MCP enabled
+    const { data: mcpRow } = await supabase
+      .from('client_mcps')
+      .select('enabled')
+      .eq('client_id', context.clientId)
+      .eq('mcp_name', mcpName)
+      .single()
 
-    let response: Response
+    if (!mcpRow?.enabled) {
+      throw new MCPNotEnabledError(context.clientId, mcpName)
+    }
+
+    let success = false
+    let errorMessage: string | undefined
+
     try {
-      response = await fetch(`${serverUrl}/call`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tool: toolName, input }),
-      })
+      let response: Response
+      try {
+        response = await fetch(`${serverUrl}/call`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tool: toolName, input }),
+        })
+      } catch (err) {
+        throw new Error(`MCP server '${mcpName}' unreachable at ${serverUrl}: ${String(err)}`)
+      }
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '')
+        throw new Error(
+          `MCP call '${toolName}' on '${mcpName}' failed (${response.status}): ${text}`,
+        )
+      }
+
+      const result = (await response.json()) as MCPToolResult
+      success = true
+      return { ...result, durationMs: Date.now() - start }
     } catch (err) {
-      throw new Error(`MCP server '${mcpName}' unreachable at ${serverUrl}: ${String(err)}`)
+      errorMessage = err instanceof Error ? err.message : String(err)
+      throw err
+    } finally {
+      // Always log — this is the billing foundation
+      void this.logCall({
+        clientId: context.clientId,
+        mcpName,
+        toolName,
+        agentName: context.agentName,
+        durationMs: Date.now() - start,
+        success,
+        errorMessage,
+      })
     }
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new Error(`MCP call '${toolName}' on '${mcpName}' failed (${response.status}): ${text}`)
-    }
-
-    const result = (await response.json()) as MCPToolResult
-    return { ...result, durationMs: Date.now() - start }
   }
 
-  // IMPORTANT: Must always be called — even on failure. This is the billing foundation.
-  // TODO: Week 6 — insert to mcp_call_logs via Supabase
-  private async logCall(_log: MCPCallLog): Promise<void> {}
+  private async logCall(log: MCPCallLog): Promise<void> {
+    const { error } = await supabase.from('mcp_call_logs').insert({
+      client_id: log.clientId,
+      mcp_name: log.mcpName,
+      tool_name: log.toolName,
+      agent_name: log.agentName,
+      input_tokens: log.inputTokens ?? null,
+      output_tokens: log.outputTokens ?? null,
+      duration_ms: log.durationMs,
+      success: log.success,
+      error_message: log.errorMessage ?? null,
+    })
+    if (error) {
+      console.warn('[MCPRouter] Failed to write call log:', error.message)
+    }
+  }
 }

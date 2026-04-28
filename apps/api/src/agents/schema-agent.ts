@@ -1,6 +1,7 @@
 import type { AgentContext, AgentResult, SchemaResult, WorkbookSchema } from '@querylens/shared'
 import { supabase } from '../lib/supabase.js'
 import { MCPRouter } from '../mcp/router.js'
+import { chat } from '../services/llm.js'
 
 export type SchemaMode = 'sync' | 'describe'
 
@@ -31,7 +32,7 @@ export class SchemaAgent {
       'tableau-mcp',
       'list-views',
       { clientId: context.clientId },
-      context
+      { clientId: context.clientId, agentName: 'SchemaAgent', userId: context.userId },
     )
     const { views } = viewsResult.data as { total: number; views: RawView[] }
 
@@ -96,12 +97,51 @@ export class SchemaAgent {
 
   private async describe(
     _input: string,
-    _context: AgentContext
+    context: AgentContext
   ): Promise<AgentResult & { data?: SchemaResult }> {
-    // TODO: Week 4 (describe mode)
-    // 1. Load schema from Supabase client_schemas for context.clientId
-    // 2. Call chat() from services/llm.ts to summarise in plain English
-    // 3. Return friendly description of available workbooks and views
-    throw new Error('SchemaAgent describe mode not yet implemented')
+    const { data: rows, error } = await supabase
+      .from('client_schemas')
+      .select('workbook_name, schema_json')
+      .eq('client_id', context.clientId)
+
+    if (error || !rows?.length) {
+      return {
+        success: false,
+        agentName: 'SchemaAgent',
+        errorMessage: 'No schema found. Run a schema sync first.',
+      }
+    }
+
+    const schemaSummary = rows
+      .map((row) => {
+        const views = (row.schema_json as { views: Array<{ name: string }> }).views
+          .map((v) => v.name)
+          .join(', ')
+        return `Workbook "${row.workbook_name}": views — ${views}`
+      })
+      .join('\n')
+
+    const llmResponse = await chat([
+      {
+        role: 'system',
+        content: 'You are a helpful Tableau assistant. Describe available data in plain English in 2-3 sentences. Be friendly and concise.',
+      },
+      {
+        role: 'user',
+        content: `Here is the available Tableau schema:\n${schemaSummary}\n\nDescribe what data is available.`,
+      },
+    ])
+
+    const workbooks: WorkbookSchema[] = rows.map((row) => ({
+      workbookId: row.workbook_name,
+      workbookName: row.workbook_name,
+      fields: [],
+    }))
+
+    return {
+      success: true,
+      agentName: 'SchemaAgent',
+      data: { workbooks, description: llmResponse.content },
+    }
   }
 }
