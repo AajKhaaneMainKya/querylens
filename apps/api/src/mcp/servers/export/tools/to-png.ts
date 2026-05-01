@@ -1,15 +1,31 @@
 import type { MCPToolResult } from '@querylens/shared'
+import { getSession, API_BASE } from '../../tableau/auth.js'
 
 export interface ToPngInput {
-  viewUrl: string
+  viewId: string  // Tableau view LUID (UUID from list-views, not the slug)
 }
 
-// Tool: to-png
-// Renders a Tableau view as a PNG and returns the raw image buffer.
-export async function toPng(_input: ToPngInput): Promise<MCPToolResult> {
-  // TODO: Week 7
-  // 1. Auth with Tableau REST API
-  // 2. GET /api/2.1/sites/{siteId}/views/{viewId}/image
-  // 3. Return image buffer (caller uploads to Supabase Storage)
-  throw new Error('to-png not yet implemented')
+export async function toPng(input: ToPngInput): Promise<MCPToolResult> {
+  const start = Date.now()
+  const { token, siteId } = await getSession()
+
+  const response = await fetch(
+    `${API_BASE}/sites/${siteId}/views/${input.viewId}/image`,
+    { headers: { 'X-Tableau-Auth': token } },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      `Tableau image download failed (${response.status}): ${await response.text()}`,
+    )
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer).toString('base64')
+
+  return {
+    success: true,
+    data: { buffer, mimeType: 'image/png', filename: 'export.png' },
+    durationMs: Date.now() - start,
+  }
 }

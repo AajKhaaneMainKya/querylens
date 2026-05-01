@@ -9,10 +9,12 @@
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
     "tableau-mcp": "tsx --env-file src/mcp/servers/tableau/.env src/mcp/servers/tableau/index.ts",
+    "export-mcp": "tsx --env-file src/mcp/servers/export/.env src/mcp/servers/export/index.ts",
     "test:tableau": "tsx --env-file src/mcp/servers/tableau/.env src/scripts/test-tableau.ts",
     "test:schema": "tsx --env-file .env src/scripts/test-schema-sync.ts",
     "test:llm": "tsx --env-file .env src/scripts/test-llm.ts",
     "test:orchestrator": "tsx --env-file .env src/scripts/test-orchestrator.ts",
+    "test:export": "tsx --env-file .env src/scripts/test-export.ts",
     "test:query": "tsx --env-file .env src/scripts/test-query-agent.ts"
   },
   "dependencies": {
@@ -21,7 +23,8 @@
     "@supabase/supabase-js": "^2.45.0",
     "cors": "^2.8.5",
     "express": "^4.19.0",
-    "openai": "^6.34.0"
+    "openai": "^6.34.0",
+    "puppeteer": "^24.42.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
