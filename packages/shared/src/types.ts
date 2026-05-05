@@ -19,11 +19,18 @@ export interface Client {
 export type Intent = 'visualize' | 'export' | 'schema' | 'clarify'
 export type AgentName = 'OrchestratorAgent' | 'QueryAgent' | 'SchemaAgent' | 'ExportAgent'
 
+export interface TableauCreds {
+  serverUrl: string
+  siteId: string
+  token: string
+}
+
 export interface AgentContext {
   clientId: string
   userId?: string
   conversationId: string
   sessionMessages: ConversationMessage[]
+  tableauCreds?: TableauCreds
 }
 
 export interface AgentResult {

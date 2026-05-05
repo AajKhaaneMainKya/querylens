@@ -23,8 +23,20 @@ app.post('/call', async (req, res) => {
     return
   }
 
+  // Forward per-request Tableau credentials from MCPRouter headers into the tool input
+  const tableauUrl    = req.headers['x-tableau-url'] as string | undefined
+  const tableauSiteId = req.headers['x-tableau-site-id'] as string | undefined
+  const tableauToken  = req.headers['x-tableau-token'] as string | undefined
+
+  const tableauCreds =
+    tableauUrl && tableauToken
+      ? { serverUrl: tableauUrl, siteId: tableauSiteId ?? '', token: tableauToken }
+      : undefined
+
+  const enrichedInput = { ...(input as object), ...(tableauCreds ? { tableauCreds } : {}) }
+
   try {
-    const result = await tools[tool]!(input)
+    const result = await tools[tool]!(enrichedInput)
     res.json(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

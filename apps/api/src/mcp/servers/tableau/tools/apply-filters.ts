@@ -5,6 +5,7 @@ export interface ApplyFiltersInput extends TableauFilterSpec {
   clientId: string
   workbookContentUrl: string  // workbook slug, e.g. "SalesAnalysis"
   viewContentUrl: string      // view slug within workbook, e.g. "Overview"
+  tableauCreds?: { serverUrl: string; siteId: string; token: string }
 }
 
 // Tableau URL filter params use the vf_ prefix.
@@ -36,11 +37,18 @@ function buildFilterParams(filters: TableauFilter[]): URLSearchParams {
 
 export async function applyFilters(input: ApplyFiltersInput): Promise<MCPToolResult> {
   const start = Date.now()
-  await getSession()  // validates / refreshes auth before building the URL
+
+  let serverBase: string
+  if (input.tableauCreds) {
+    serverBase = input.tableauCreds.serverUrl.replace(/\/$/, '')
+  } else {
+    await getSession()  // validate / refresh env-based auth
+    serverBase = SERVER_BASE
+  }
 
   const params = buildFilterParams(input.filters ?? [])
   const qs = params.toString()
-  const chartUrl = `${SERVER_BASE}/views/${input.workbookContentUrl}/${input.viewContentUrl}${qs ? `?${qs}` : ''}`
+  const chartUrl = `${serverBase}/views/${input.workbookContentUrl}/${input.viewContentUrl}${qs ? `?${qs}` : ''}`
 
   return {
     success: true,

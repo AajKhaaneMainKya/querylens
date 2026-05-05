@@ -156,7 +156,7 @@ export class QueryAgent {
       }
     }
 
-    const toolInput = llmResponse.toolCalls[0]!.input as FilterToolResult
+    const toolInput = llmResponse.toolCalls[0]!.input as unknown as FilterToolResult
 
     if (toolInput.clarify) {
       return { success: true, agentName: 'QueryAgent', clarifyQuestion: toolInput.clarify }
@@ -201,7 +201,7 @@ export class QueryAgent {
         dimensions: toolInput.dimensions,
         measures: toolInput.measures,
       },
-      { clientId: context.clientId, agentName: 'QueryAgent', userId: context.userId },
+      { clientId: context.clientId, agentName: 'QueryAgent', userId: context.userId, tableauCreds: context.tableauCreds },
     )
 
     const { chartUrl, appliedFilters } = mcpResult.data as {

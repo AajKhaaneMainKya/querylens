@@ -21,6 +21,16 @@ queryRouter.post('/', authenticate, async (req: Request, res: Response) => {
     return
   }
 
+  // Per-request Tableau credentials forwarded from the connection screen
+  const tableauUrl    = req.headers['x-tableau-url'] as string | undefined
+  const tableauSiteId = req.headers['x-tableau-site-id'] as string | undefined
+  const tableauToken  = req.headers['x-tableau-token'] as string | undefined
+
+  const tableauCreds =
+    tableauUrl && tableauToken
+      ? { serverUrl: tableauUrl, siteId: tableauSiteId ?? '', token: tableauToken }
+      : undefined
+
   // Load existing conversation or create a new one
   let convId = conversationId
   let sessionMessages: ConversationMessage[] = []
@@ -47,9 +57,9 @@ queryRouter.post('/', authenticate, async (req: Request, res: Response) => {
       userId,
       conversationId: convId!,
       sessionMessages,
+      tableauCreds,
     })
 
-    // Persist user turn + assistant response
     const updatedMessages: ConversationMessage[] = [
       ...sessionMessages,
       { role: 'user', content: query, timestamp: new Date().toISOString() },

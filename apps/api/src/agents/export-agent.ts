@@ -47,7 +47,7 @@ export class ExportAgent {
       'export-mcp',
       `to-${format}`,
       { viewId },
-      { clientId: context.clientId, agentName: 'ExportAgent', userId: context.userId },
+      { clientId: context.clientId, agentName: 'ExportAgent', userId: context.userId, tableauCreds: context.tableauCreds },
     )
 
     const { buffer, mimeType, filename } = mcpResult.data as ExportToolData

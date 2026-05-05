@@ -2,10 +2,16 @@
   "name": "@querylens/shared",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
+  "main": "./dist/types.js",
   "exports": {
-    ".": "./src/types.ts"
+    ".": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
   },
   "scripts": {
+    "build": "tsc",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import type { MCPName, MCPToolResult, MCPCallLog, AgentName } from '@querylens/shared'
+import type { MCPName, MCPToolResult, MCPCallLog, AgentName, TableauCreds } from '@querylens/shared'
 import { MCPRegistry } from './registry.js'
 import { supabase } from '../lib/supabase.js'
 
@@ -6,6 +6,7 @@ export interface MCPCallContext {
   clientId: string
   agentName: AgentName
   userId?: string
+  tableauCreds?: TableauCreds
 }
 
 export class MCPNotEnabledError extends Error {
@@ -45,7 +46,14 @@ export class MCPRouter {
       try {
         response = await fetch(`${serverUrl}/call`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(context.tableauCreds ? {
+              'x-tableau-url': context.tableauCreds.serverUrl,
+              'x-tableau-site-id': context.tableauCreds.siteId,
+              'x-tableau-token': context.tableauCreds.token,
+            } : {}),
+          },
           body: JSON.stringify({ tool: toolName, input }),
         })
       } catch (err) {

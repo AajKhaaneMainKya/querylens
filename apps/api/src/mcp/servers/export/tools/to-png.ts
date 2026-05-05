@@ -1,16 +1,33 @@
 import type { MCPToolResult } from '@querylens/shared'
 import { getSession, API_BASE } from '../../tableau/auth.js'
 
+const API_VERSION = '3.21'
+
 export interface ToPngInput {
-  viewId: string  // Tableau view LUID (UUID from list-views, not the slug)
+  viewId: string
+  tableauCreds?: { serverUrl: string; siteId: string; token: string }
 }
 
 export async function toPng(input: ToPngInput): Promise<MCPToolResult> {
   const start = Date.now()
-  const { token, siteId } = await getSession()
+
+  let token: string
+  let siteId: string
+  let apiBase: string
+
+  if (input.tableauCreds) {
+    token = input.tableauCreds.token
+    siteId = input.tableauCreds.siteId
+    apiBase = `${input.tableauCreds.serverUrl.replace(/\/$/, '')}/api/${API_VERSION}`
+  } else {
+    const session = await getSession()
+    token = session.token
+    siteId = session.siteId
+    apiBase = API_BASE
+  }
 
   const response = await fetch(
-    `${API_BASE}/sites/${siteId}/views/${input.viewId}/image`,
+    `${apiBase}/sites/${siteId}/views/${input.viewId}/image`,
     { headers: { 'X-Tableau-Auth': token } },
   )
 
