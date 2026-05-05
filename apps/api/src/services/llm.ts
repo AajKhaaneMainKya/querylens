@@ -58,8 +58,8 @@ function toGroqTools(tools: LLMTool[]): OpenAI.Chat.ChatCompletionTool[] {
 function parseResponse(message: OpenAI.Chat.ChatCompletionMessage): LLMResponse {
   const toolCalls: LLMToolCall[] =
     message.tool_calls?.map((tc) => ({
-      name: tc['function'].name,
-      input: JSON.parse(tc['function'].arguments) as Record<string, unknown>,
+      name: (tc as any).function.name as string,
+      input: JSON.parse((tc as any).function.arguments as string) as Record<string, unknown>,
     })) ?? []
   return { content: message.content ?? '', toolCalls }
 }

@@ -78,7 +78,7 @@ queryRouter.post('/', authenticate, async (req: Request, res: Response) => {
     res.json({
       success: result.success,
       result,
-      conversationId: convId,
+      conversationId: convId ?? '',
     } satisfies QueryResponse)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
