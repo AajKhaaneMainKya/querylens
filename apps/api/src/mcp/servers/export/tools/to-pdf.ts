@@ -1,55 +1,48 @@
-import puppeteer from 'puppeteer'
 import type { MCPToolResult } from '@querylens/shared'
-import { getSession, SERVER_BASE } from '../../tableau/auth.js'
+import { getSession, API_BASE } from '../../tableau/auth.js'
+
+const API_VERSION = '3.21'
 
 export interface ToPdfInput {
-  viewUrl: string
-  width?: number
-  height?: number
+  viewId: string
+  tableauCreds?: { serverUrl: string; siteId: string; token: string }
 }
 
 export async function toPdf(input: ToPdfInput): Promise<MCPToolResult> {
   const start = Date.now()
-  const { viewUrl, width = 1280, height = 800 } = input
 
-  const { token } = await getSession()
-  const domain = new URL(SERVER_BASE).hostname
+  let token: string
+  let siteId: string
+  let apiBase: string
 
-  const browser = await puppeteer.launch({ headless: true })
-  try {
-    const page = await browser.newPage()
-    await page.setViewport({ width, height })
+  if (input.tableauCreds) {
+    token = input.tableauCreds.token
+    siteId = input.tableauCreds.siteId
+    apiBase = `${input.tableauCreds.serverUrl.replace(/\/$/, '')}/api/${API_VERSION}`
+  } else {
+    const session = await getSession()
+    token = session.token
+    siteId = session.siteId
+    apiBase = API_BASE
+  }
 
-    // Navigate to the base domain first so Puppeteer has a page context
-    // on which to set the cookie — cookies can only be set for the current
-    // origin, so we must visit the domain before calling setCookie.
-    await page.goto(SERVER_BASE, { waitUntil: 'domcontentloaded', timeout: 15000 })
+  const response = await fetch(
+    `${apiBase}/sites/${siteId}/views/${input.viewId}/pdf`,
+    { headers: { 'X-Tableau-Auth': token } },
+  )
 
-    await page.setCookie({
-      name: 'workgroup_session_id',
-      value: token,
-      domain,
-      path: '/',
-      httpOnly: true,
-      secure: true,
-    })
+  if (!response.ok) {
+    throw new Error(
+      `Tableau PDF download failed (${response.status}): ${await response.text()}`,
+    )
+  }
 
-    // Now navigate to the actual view — cookie is already set on the domain
-    await page.goto(viewUrl, { waitUntil: 'networkidle2', timeout: 60000 })
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer).toString('base64')
 
-    const pdf = await page.pdf({
-      width: `${width}px`,
-      height: `${height}px`,
-      printBackground: true,
-    })
-    const buffer = Buffer.from(pdf).toString('base64')
-
-    return {
-      success: true,
-      data: { buffer, mimeType: 'application/pdf', filename: 'export.pdf' },
-      durationMs: Date.now() - start,
-    }
-  } finally {
-    await browser.close()
+  return {
+    success: true,
+    data: { buffer, mimeType: 'application/pdf', filename: 'export.pdf' },
+    durationMs: Date.now() - start,
   }
 }
