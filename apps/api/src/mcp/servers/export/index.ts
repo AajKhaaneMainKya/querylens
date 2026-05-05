@@ -1,5 +1,5 @@
 import express from 'express'
-import type { MCPToolResult } from '@querylens/shared'
+import type { MCPToolResult } from '../../../lib/types.js'
 import { toPng } from './tools/to-png.js'
 import { toPdf } from './tools/to-pdf.js'
 

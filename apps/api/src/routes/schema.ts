@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
-import type { SchemaSyncRequest, SchemaSyncResponse } from '@querylens/shared'
+import type { SchemaSyncRequest, SchemaSyncResponse } from '../lib/types.js'
 import { authenticate } from '../middleware/auth.js'
 import { SchemaAgent } from '../agents/schema-agent.js'
 

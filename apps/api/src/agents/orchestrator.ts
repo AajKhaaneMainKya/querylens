@@ -1,4 +1,4 @@
-import type { AgentContext, OrchestratorResult, Intent } from '@querylens/shared'
+import type { AgentContext, OrchestratorResult, Intent } from '../lib/types.js'
 import { chatWithTools } from '../services/llm.js'
 import type { LLMTool } from '../services/llm.js'
 import { supabase } from '../lib/supabase.js'

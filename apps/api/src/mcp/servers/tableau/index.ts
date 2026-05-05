@@ -1,5 +1,5 @@
 import express from 'express'
-import type { MCPToolResult } from '@querylens/shared'
+import type { MCPToolResult } from '../../../lib/types.js'
 import { getSession } from './auth.js'
 import { applyFilters } from './tools/apply-filters.js'
 import { getView } from './tools/get-view.js'

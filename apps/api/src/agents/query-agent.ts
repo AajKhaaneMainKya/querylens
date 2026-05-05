@@ -1,4 +1,4 @@
-import type { AgentContext, AgentResult, QueryResult, TableauFilter, ChartType } from '@querylens/shared'
+import type { AgentContext, AgentResult, QueryResult, TableauFilter, ChartType } from '../lib/types.js'
 import { chatWithTools } from '../services/llm.js'
 import type { LLMTool } from '../services/llm.js'
 import { supabase } from '../lib/supabase.js'

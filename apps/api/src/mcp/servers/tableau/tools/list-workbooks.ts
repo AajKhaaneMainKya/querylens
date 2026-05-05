@@ -1,4 +1,4 @@
-import type { MCPToolResult } from '@querylens/shared'
+import type { MCPToolResult } from '../../../../lib/types.js'
 import { getSession, tableauFetch } from '../auth.js'
 
 export interface ListWorkbooksInput {

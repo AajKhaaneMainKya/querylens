@@ -1,4 +1,4 @@
-import type { TableauFilterSpec, TableauFilter, MCPToolResult } from '@querylens/shared'
+import type { TableauFilterSpec, TableauFilter, MCPToolResult } from '../../../../lib/types.js'
 import { getSession, SERVER_BASE } from '../auth.js'
 
 export interface ApplyFiltersInput extends TableauFilterSpec {

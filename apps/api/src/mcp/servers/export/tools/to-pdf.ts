@@ -1,4 +1,4 @@
-import type { MCPToolResult } from '@querylens/shared'
+import type { MCPToolResult } from '../../../../lib/types.js'
 import { getSession, API_BASE } from '../../tableau/auth.js'
 
 const API_VERSION = '3.21'

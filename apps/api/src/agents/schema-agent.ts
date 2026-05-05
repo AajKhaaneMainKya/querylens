@@ -1,4 +1,4 @@
-import type { AgentContext, AgentResult, SchemaResult, WorkbookSchema } from '@querylens/shared'
+import type { AgentContext, AgentResult, SchemaResult, WorkbookSchema } from '../lib/types.js'
 import { supabase } from '../lib/supabase.js'
 import { MCPRouter } from '../mcp/router.js'
 import { chat } from '../services/llm.js'

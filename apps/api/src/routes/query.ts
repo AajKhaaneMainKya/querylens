@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
-import type { QueryRequest, QueryResponse, ConversationMessage } from '@querylens/shared'
+import type { QueryRequest, QueryResponse, ConversationMessage } from '../lib/types.js'
 import { authenticate } from '../middleware/auth.js'
 import { OrchestratorAgent } from '../agents/orchestrator.js'
 import { supabase } from '../lib/supabase.js'

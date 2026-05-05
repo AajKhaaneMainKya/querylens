@@ -1,4 +1,4 @@
-import type { AgentContext, AgentResult, ExportResult, ExportFormat } from '@querylens/shared'
+import type { AgentContext, AgentResult, ExportResult, ExportFormat } from '../lib/types.js'
 import { MCPRouter } from '../mcp/router.js'
 import { supabase } from '../lib/supabase.js'
 

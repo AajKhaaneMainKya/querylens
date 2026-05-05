@@ -1,4 +1,4 @@
-import type { MCPToolResult } from '@querylens/shared'
+import type { MCPToolResult } from '../../../../lib/types.js'
 import { getSession, SERVER_BASE } from '../auth.js'
 
 export interface EmbedWorkbookInput {

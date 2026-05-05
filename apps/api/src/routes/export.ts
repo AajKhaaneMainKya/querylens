@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
-import type { ExportFormat } from '@querylens/shared'
+import type { ExportFormat } from '../lib/types.js'
 import { authenticate } from '../middleware/auth.js'
 import { ExportAgent } from '../agents/export-agent.js'
 

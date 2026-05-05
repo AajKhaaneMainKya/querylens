@@ -1,4 +1,4 @@
-import type { MCPName, MCPToolResult, MCPCallLog, AgentName, TableauCreds } from '@querylens/shared'
+import type { MCPName, MCPToolResult, MCPCallLog, AgentName, TableauCreds } from '../lib/types.js'
 import { MCPRegistry } from './registry.js'
 import { supabase } from '../lib/supabase.js'
 
