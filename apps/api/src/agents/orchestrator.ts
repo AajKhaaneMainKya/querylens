@@ -75,7 +75,7 @@ export class OrchestratorAgent {
       [classifyIntentTool],
     )
 
-    const toolInput = llmResponse.toolCalls[0]?.input as IntentToolResult | undefined
+    const toolInput = llmResponse.toolCalls[0]?.input as unknown as IntentToolResult | undefined
 
     if (!toolInput || toolInput.intent === 'clarify') {
       return {
