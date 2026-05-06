@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { checkAndSetAllowlist } from './WaitlistGate'
 
 export interface TableauSession {
   sessionToken: string
@@ -28,6 +29,7 @@ export default function TableauConnect({ onConnect }: TableauConnectProps) {
   const [siteId, setSiteId] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -45,6 +47,7 @@ export default function TableauConnect({ onConnect }: TableauConnectProps) {
       const json = await res.json()
 
       if (json.success) {
+        if (email) checkAndSetAllowlist(email)
         const session: TableauSession = { sessionToken: json.sessionToken, siteId: json.siteId, serverUrl }
         const credentials: TableauCredentials = { serverUrl, siteId: json.siteId, username, password }
         onConnect(session, credentials)
@@ -101,6 +104,14 @@ export default function TableauConnect({ onConnect }: TableauConnectProps) {
             required
             value={password}
             onChange={e => setPassword(e.target.value)}
+            disabled={status === 'loading'}
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          />
+          <input
+            type="email"
+            placeholder="Your email (optional)"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
             disabled={status === 'loading'}
             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           />

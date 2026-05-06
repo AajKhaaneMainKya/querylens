@@ -6,6 +6,8 @@ import WaitlistForm from './WaitlistForm'
 const QUERY_COUNT_KEY = 'ql_query_count'
 const WAITLISTED_KEY  = 'ql_waitlisted'
 
+const ALLOWED_EMAILS = ['rshivs.1295@gmail.com']
+
 export function incrementQueryCount(): number {
   const current = parseInt(localStorage.getItem(QUERY_COUNT_KEY) ?? '0', 10)
   const next = current + 1
@@ -15,6 +17,12 @@ export function incrementQueryCount(): number {
 
 export function isWaitlisted(): boolean {
   return localStorage.getItem(WAITLISTED_KEY) === 'true'
+}
+
+export function checkAndSetAllowlist(email: string): boolean {
+  if (!ALLOWED_EMAILS.includes(email.toLowerCase().trim())) return false
+  localStorage.setItem(WAITLISTED_KEY, 'true')
+  return true
 }
 
 interface WaitlistGateProps {
