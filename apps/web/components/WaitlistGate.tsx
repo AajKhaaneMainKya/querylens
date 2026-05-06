@@ -6,7 +6,7 @@ import WaitlistForm from './WaitlistForm'
 const QUERY_COUNT_KEY = 'ql_query_count'
 const WAITLISTED_KEY  = 'ql_waitlisted'
 
-const ALLOWED_EMAILS = ['rshivs.1295@gmail.com']
+const ALLOWED_EMAILS = ['rshivs.1295@gmail.com', 'rahul.shivshankar@regenesys.com']
 
 export function incrementQueryCount(): number {
   const current = parseInt(localStorage.getItem(QUERY_COUNT_KEY) ?? '0', 10)
