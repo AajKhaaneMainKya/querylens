@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import type { QueryResponse, OrchestratorResult, QueryResult, ExportResult, SchemaResult } from '@querylens/shared'
-import type { TableauSession } from './TableauConnect'
+import type { TableauSession, TableauCredentials } from './TableauConnect'
 import ChartDisplay from './ChartDisplay'
 
 interface Message {
@@ -17,13 +17,22 @@ interface Message {
 interface ChatInterfaceProps {
   clientId: string
   tableauSession?: TableauSession
+  tableauCredentials?: TableauCredentials | null
+  onSessionRefresh?: (session: TableauSession) => void
   onQueryComplete?: () => void
   blocked?: boolean
 }
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
-export default function ChatInterface({ clientId, tableauSession, onQueryComplete, blocked }: ChatInterfaceProps) {
+export default function ChatInterface({
+  clientId,
+  tableauSession,
+  tableauCredentials,
+  onSessionRefresh,
+  onQueryComplete,
+  blocked,
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [input, setInput] = useState('')
@@ -34,13 +43,51 @@ export default function ChatInterface({ clientId, tableauSession, onQueryComplet
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
 
-  function tableauHeaders(): Record<string, string> {
-    if (!tableauSession) return {}
+  function buildTableauHeaders(session?: TableauSession): Record<string, string> {
+    if (!session) return {}
     return {
-      'x-tableau-url': tableauSession.serverUrl,
-      'x-tableau-site-id': tableauSession.siteId,
-      'x-tableau-token': tableauSession.sessionToken,
+      'x-tableau-url': session.serverUrl,
+      'x-tableau-site-id': session.siteId,
+      'x-tableau-token': session.sessionToken,
     }
+  }
+
+  // Makes a fetch call, and on 401 silently re-authenticates using stored
+  // credentials and retries once with the fresh token.
+  async function fetchWithTokenRefresh(url: string, init: RequestInit): Promise<Response> {
+    const res = await fetch(url, init)
+
+    if (res.status !== 401 || !tableauCredentials) return res
+
+    const refreshRes = await fetch(`${API_URL}/connect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        serverUrl: tableauCredentials.serverUrl,
+        siteId: tableauCredentials.siteId,
+        username: tableauCredentials.username,
+        password: tableauCredentials.password,
+      }),
+    })
+
+    if (!refreshRes.ok) return res
+
+    const refreshJson = await refreshRes.json()
+    if (!refreshJson.success) return res
+
+    const newSession: TableauSession = {
+      sessionToken: refreshJson.sessionToken,
+      siteId: refreshJson.siteId,
+      serverUrl: tableauCredentials.serverUrl,
+    }
+    onSessionRefresh?.(newSession)
+
+    // Retry with fresh token, replacing only the auth header
+    const newHeaders: Record<string, string> = {
+      ...(init.headers as Record<string, string>),
+      ...buildTableauHeaders(newSession),
+    }
+    return fetch(url, { ...init, headers: newHeaders })
   }
 
   async function send() {
@@ -52,9 +99,9 @@ export default function ChatInterface({ clientId, tableauSession, onQueryComplet
     setIsLoading(true)
 
     try {
-      const res = await fetch(`${API_URL}/query`, {
+      const res = await fetchWithTokenRefresh(`${API_URL}/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...tableauHeaders() },
+        headers: { 'Content-Type': 'application/json', ...buildTableauHeaders(tableauSession) },
         body: JSON.stringify({ query, clientId, conversationId: conversationId ?? undefined }),
       })
       const json: QueryResponse = await res.json()

@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { Suspense, useState, useEffect } from 'react'
-import TableauConnect, { type TableauSession } from '../../components/TableauConnect'
+import TableauConnect, { type TableauSession, type TableauCredentials } from '../../components/TableauConnect'
 import ChatInterface from '../../components/ChatInterface'
 import WaitlistGate, { incrementQueryCount, isWaitlisted } from '../../components/WaitlistGate'
 
@@ -11,6 +11,7 @@ function ChatPage() {
   const clientId = searchParams.get('client')
 
   const [session, setSession] = useState<TableauSession | null>(null)
+  const [credentials, setCredentials] = useState<TableauCredentials | null>(null)
   const [queryCount, setQueryCount] = useState(0)
   const [gateVisible, setGateVisible] = useState(false)
 
@@ -19,6 +20,11 @@ function ChatPage() {
     setQueryCount(stored)
     if (stored > 1 && !isWaitlisted()) setGateVisible(true)
   }, [])
+
+  function handleConnect(newSession: TableauSession, newCredentials: TableauCredentials) {
+    setSession(newSession)
+    setCredentials(newCredentials)
+  }
 
   function handleQueryComplete() {
     const next = incrementQueryCount()
@@ -37,7 +43,7 @@ function ChatPage() {
   }
 
   if (!session) {
-    return <TableauConnect onConnect={setSession} />
+    return <TableauConnect onConnect={handleConnect} />
   }
 
   return (
@@ -49,6 +55,8 @@ function ChatPage() {
         <ChatInterface
           clientId={clientId}
           tableauSession={session}
+          tableauCredentials={credentials}
+          onSessionRefresh={setSession}
           onQueryComplete={handleQueryComplete}
           blocked={gateVisible}
         />

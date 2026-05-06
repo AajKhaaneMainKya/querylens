@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 
 export interface TableauSession {
   sessionToken: string
@@ -8,8 +8,15 @@ export interface TableauSession {
   serverUrl: string
 }
 
+export interface TableauCredentials {
+  serverUrl: string
+  siteId: string
+  username: string
+  password: string
+}
+
 interface TableauConnectProps {
-  onConnect: (session: TableauSession) => void
+  onConnect: (session: TableauSession, credentials: TableauCredentials) => void
 }
 
 type Status = 'idle' | 'loading' | 'error'
@@ -38,7 +45,9 @@ export default function TableauConnect({ onConnect }: TableauConnectProps) {
       const json = await res.json()
 
       if (json.success) {
-        onConnect({ sessionToken: json.sessionToken, siteId: json.siteId, serverUrl })
+        const session: TableauSession = { sessionToken: json.sessionToken, siteId: json.siteId, serverUrl }
+        const credentials: TableauCredentials = { serverUrl, siteId: json.siteId, username, password }
+        onConnect(session, credentials)
       } else {
         setErrorMessage(json.error ?? 'Connection failed. Check your credentials.')
         setStatus('error')
