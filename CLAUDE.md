@@ -502,4 +502,97 @@ Do not build. Comment `// Phase 2:` or `// Phase 3:` if referenced:
 
 ---
 
+## Phase 2 Extension — Metabase Support
+
+> Do not build yet. Architecture reference so Phase 1 code doesn't need rework.
+
+### Architecture Additions
+
+**New MCP server: `apps/api/src/mcp/servers/metabase/`**
+
+Four tools, mirroring the Tableau MCP pattern:
+
+| Tool | Endpoint | Description |
+|---|---|---|
+| `list-cards` | `GET /api/card` | Returns all saved questions: id, name, display type, dataset_query |
+| `get-card` | `GET /api/card/{id}` | Full card metadata incl. result_metadata (field names + types) |
+| `apply-filters` | `POST /api/card/{id}/query` | Accepts parameters array, returns query results as JSON |
+| `get-image` | `GET /api/card/{id}/query/png` | Returns PNG buffer — same pattern as Tableau image endpoint |
+
+**Metabase auth** is simpler than Tableau PAT — two options:
+- Session token: `POST /api/session` with `{ email, password }` → returns `{ id: token }`
+- Static API key: generated in Metabase Settings → API Keys (preferred for production)
+- All requests use header: `X-Metabase-Session: <token>`
+
+**`MetabaseSchemaAgent`** — syncs card metadata into `client_schemas` with `tool: 'metabase'` flag to distinguish from Tableau schemas. Same upsert pattern as `SchemaAgent`.
+
+**`MCPRegistry`** — add `metabase-mcp` entry pointing to `METABASE_MCP_URL` env var.
+
+---
+
+### Frontend Additions
+
+**`TableauConnect.tsx` → rename to `BIConnect.tsx`**
+
+- Add a toggle at the top: **Tableau** | **Metabase**
+- Tableau selected (current): Server URL, Site ID, Username, Password, Email
+- Metabase selected (new): Metabase server URL + API token only — no site ID, no username/password
+- `TableauSession` → `BISession`, add field `biTool: 'tableau' | 'metabase'`
+- `onConnect` callback signature unchanged — still passes `(session, credentials)`
+
+---
+
+### Agent Changes
+
+- **`AgentContext`** — add `biTool: 'tableau' | 'metabase'` (sourced from session, passed by route handlers via header `x-bi-tool`)
+- **`OrchestratorAgent`** — passes `biTool` through to specialist agents unchanged
+- **`QueryAgent`** — checks `context.biTool`: calls `metabase-mcp` if Metabase, `tableau-mcp` if Tableau
+- **`ExportAgent`** — same routing pattern: `get-image` tool on `metabase-mcp` vs `to-png` on `export-mcp`
+
+---
+
+### Database Additions
+
+```sql
+-- Add bi_tool column to clients
+alter table clients add column bi_tool text not null default 'tableau';
+
+-- Add bi_tool column to client_schemas
+alter table client_schemas add column bi_tool text not null default 'tableau';
+
+-- Enable metabase-mcp for Metabase clients
+insert into client_mcps (client_id, mcp_name) values ('<client_id>', 'metabase-mcp');
+```
+
+---
+
+### New Environment Variables
+
+**`apps/api/src/mcp/servers/metabase/.env`**
+```
+METABASE_URL=
+METABASE_API_TOKEN=
+SUPABASE_URL=
+SUPABASE_SERVICE_KEY=
+PORT=3004
+```
+
+**`apps/api/.env`** — add:
+```
+METABASE_MCP_URL=http://localhost:3004
+```
+
+---
+
+### Phase 2 Build Order
+
+1. Add `bi_tool` column to `client_schemas` and `clients` in Supabase
+2. Build `metabase-mcp` server and test locally with a Metabase Cloud trial
+3. Rename `TableauConnect.tsx` → `BIConnect.tsx`, add tool selector toggle
+4. Add `biTool` to `AgentContext` and update `QueryAgent` + `ExportAgent` routing
+5. Deploy `metabase-mcp` to Railway as a fourth service (alongside api, tableau-mcp, export-mcp)
+6. Update marketing site copy to mention both Tableau and Metabase
+
+---
+
 *QueryLens · Phase 1 · Multi-Agent + MCP Architecture · Last updated April 2026*
